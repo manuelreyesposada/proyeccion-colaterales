@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Productos Colaterales</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--azul:#173d59;--celeste:#2f80ed;--naranja:#f97000;--gris:#f4f6f8;--borde:#d8dee6;--texto:#1d2939;--rojo:#d92d20;--verde:#039855;--ambar:#b54708}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff;color:var(--texto)}
+header{background:var(--azul);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}header h1{margin:0;font-size:22px}header span{opacity:.9;font-size:13px}
+main{padding:22px;max-width:1450px;margin:auto}.filters{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px;background:var(--gris);border:1px solid var(--borde);border-radius:14px;padding:16px;margin-bottom:18px}
+label{font-size:12px;font-weight:bold;color:#475467;display:block;margin-bottom:6px}select,input{width:100%;padding:10px;border:1px solid var(--borde);border-radius:10px;background:#fff}
+.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px}.card{border:1px solid var(--borde);border-radius:14px;padding:16px;background:white;box-shadow:0 3px 12px rgba(16,24,40,.05)}.card h3{margin:0 0 8px;font-size:12px;color:#667085;text-transform:uppercase}.card .value{font-size:25px;font-weight:800}.card .sub{font-size:12px;margin-top:6px;color:#667085}.positive{color:var(--verde)}.negative{color:var(--rojo)}
+.insights{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px}.insight{background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:16px;font-size:13px}.insight b{display:block;margin-bottom:8px;color:#9a3412;text-transform:uppercase}.insight .metric{font-size:28px;font-weight:800;color:#1d2939;margin-bottom:4px}.semaforo{display:inline-block;margin-top:8px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:bold}.verde{background:#ecfdf3;color:#027a48}.amarillo{background:#fffaeb;color:#b54708}.rojo{background:#fef3f2;color:#b42318}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-bottom:18px}.panel{border:1px solid var(--borde);border-radius:14px;padding:16px;background:#fff}.panel h2{font-size:16px;margin:0 0 14px;color:#101828}canvas{max-height:340px}
+.table-wrap{overflow:auto;border:1px solid var(--borde);border-radius:14px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:var(--azul);color:#fff;padding:10px;text-align:left;position:sticky;top:0}td{padding:9px;border-bottom:1px solid #edf0f4}tr.alert{background:#fff4f4}tr.good{background:#f0fff7}.bar{height:8px;background:#e4e7ec;border-radius:20px;overflow:hidden}.bar div{height:100%;background:var(--celeste)}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.grid,.insights,.filters{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div><h1>Dashboard de Productos Colaterales</h1><span>Crédito Santander y Seguros Vehiculares · Seguimiento por punto de venta</span></div><span id="periodo">PROYECCIÓN</span></header>
+<main>
+<section class="filters">
+<div><label>Producto</label><select id="producto"><option selected>Crédito Santander</option><option>Seguros Vehiculares</option></select></div>
+<div><label>Zona</label><select id="zona"><option value="Todos">Todos</option></select></div>
+<div><label>Marca / Negocio</label><select id="marca"><option value="Todos">Todos</option></select></div>
+<div><label>Buscar punto de venta</label><input id="buscar" placeholder="Ej. KIA, Ford, Tarapoto..." /></div>
+</section>
+<section class="cards">
+<div class="card"><h3>Headcount</h3><div class="value" id="kHead"></div><div class="sub">Equipo comercial</div></div>
+<div class="card"><h3>Vehículos</h3><div class="value" id="kVenta"></div><div class="sub">Tamaño de negocio · Promedio mensual</div></div>
+<div class="card"><h3>Meta producto</h3><div class="value" id="kMeta"></div><div class="sub" id="kMetaSub">Objetivo total</div></div>
+<div class="card"><h3>Avance</h3><div class="value" id="kAvance"></div><div class="sub" id="kCumpl"></div></div>
+<div class="card"><h3>Total proyectado</h3><div class="value" id="kProy"></div><div class="sub">Cierre estimado</div></div>
+<div class="card"><h3>Faltante</h3><div class="value" id="kFaltan"></div><div class="sub">Brecha vs meta</div></div>
+</section>
+<section class="insights" id="insights"></section>
+<section class="panel"><h2>Top puntos de venta por tamaño de negocio</h2><canvas id="chartVentas"></canvas></section>
+<section class="panel"><h2>Detalle operativo</h2><div class="table-wrap"><table id="tabla"><thead><tr><th>Producto</th><th>Punto de venta</th><th>Zona</th><th>Marca</th><th>HC</th><th>Venta acum.</th><th>Vehículos</th><th>Meta</th><th>Avance</th><th>X vender</th><th>% Cumpl.</th><th>Total proy.</th><th>Faltan</th><th>EFI_VEH</th><th>EFI_PROD</th></tr></thead><tbody></tbody></table></div></section>
+</main>
+<script>
+const base=[
+['CAX VEH CAJAMARCA','Cajamarca','Cajamarca',3,52,10],['CIX VEH KIA','Chiclayo','KIA',5,124,25],['CIX VEH CHERY','Chiclayo','Chery',4,124,25],['CIX VEH MIT','Chiclayo','Mitsubishi',3,59,12],['CIX VEH SALAVERRY FORD','Chiclayo','Ford',3,87,17],['CIX VEH MULTIJO','Chiclayo','Multimarca',4,131,26],['CIX VEH SALAVERRY AANDES','Chiclayo','Altos Andes',3,89,18],['CIX VEH MG','Chiclayo','MG',2,0,0],['CIX VEH ANDES MOTOR + DIVE','Chiclayo','Andes Motor + Dive',2,11,2],['CIX VEH LAMB (PESADOS)','Chiclayo','Pesados',1,25,5],['CIX VEH LAMB MULTI','Chiclayo','Multimarca',1,9,2],['CIX VEH SALAVERRY PEUGEOT','Chiclayo','Peugeot',1,5,1],['CIX VEH VOL','Chiclayo','Volvo',2,13,3],['CIX VEH FONDO COLECTIVO','Chiclayo','Fondo Colectivo',0,9,2],['PIU VEH KIA','Piura','KIA',5,164,33],['PIU VEH CHERY','Piura','Chery',5,173,35],['PIU VEH FORD','Piura','Ford',4,93,19],['PIU VEH ALTOS ANDES','Piura','Altos Andes',3,111,22],['PIU VEH MEGA','Piura','Mega',0,50,10],['PIU VEH MG','Piura','MG',2,0,0],['PIU VEH MIRAFLORES','Piura','Miraflores',5,150,30],['PIU VEH MIT','Piura','Mitsubishi',3,97,19],['PIU VEH MULTI CHULUCANAS','Piura','Multimarca',4,20,4],['PIU VEH SUBARU + DFSK','Piura','Subaru + DFSK',2,38,8],['PIU VEH PESADOS','Piura','Pesados',0,7,1],['PIU VEH VOL','Piura','Volvo',2,26,5],['PIU VEH PEU','Piura','Peugeot',0,6,1],['MAP FOTON PIU','Piura','Foton',0,5,1],['SUL VEHICULOS','Piura','Sullana',3,78,16],['TUM VEHICULOS','Piura','Tumbes',2,21,4],['TAL VEHICULOS','Piura','Talara',3,22,4],['PIU VEH FONDO COLECTIVO','Piura','Fondo Colectivo',0,17,3],['TAR VEH TARAPOTO','Tarapoto','Tarapoto',3,82,16]
+];
+const sant=[[3,0,1,1,-2],[7,8,2,10,3],[7,4,1,5,-2],[4,7,3,10,6],[5,1,1,2,-3],[8,2,3,5,-3],[5,4,0,4,-1],[0,0,0,0,0],[1,0,0,0,-1],[2,0,0,0,-2],[1,0,0,0,-1],[0,0,0,0,0],[1,0,0,0,-1],[1,0,0,0,-1],[10,6,2,8,-2],[10,1,3,5,-5],[6,2,3,5,-1],[7,3,1,4,-3],[3,0,0,0,-3],[0,0,1,1,1],[9,1,2,3,-6],[6,1,4,5,-1],[1,1,0,1,0],[2,1,1,2,0],[0,0,0,0,0],[2,0,0,0,-2],[0,0,0,0,0],[0,0,0,0,0],[5,2,1,3,-2],[1,0,0,0,-1],[1,0,0,0,-1],[1,0,0,0,-1],[5,5,4,9,4]];
+const seg=[[2,0,1,1,-1],[5,2,1,3,-2],[5,3,2,5,0],[2,1,1,2,0],[3,2,1,3,0],[5,6,0,6,1],[4,2,2,4,0],[0,0,0,0,0],[0,0,0,0,0],[1,0,0,0,-1],[0,0,0,0,0],[0,0,0,0,0],[1,0,0,0,-1],[0,0,0,0,0],[7,6,4,10,3],[7,7,0,7,0],[4,2,2,4,0],[4,1,0,1,-3],[2,0,0,0,-2],[0,2,1,3,3],[6,1,1,2,-4],[4,0,0,0,-4],[1,0,0,0,-1],[2,0,0,0,-2],[0,0,0,0,0],[1,0,0,0,-1],[0,0,0,0,0],[0,0,0,0,0],[3,1,0,1,-2],[1,0,0,0,-1],[1,0,0,0,-1],[1,0,0,0,-1],[3,0,1,1,-2]];
+function make(product, vals){return base.map((b,i)=>({producto:product,p:b[0],z:b[1],m:b[2],hc:b[3],v:b[4],pm:b[5],meta:vals[i][0],av:vals[i][1],xd:vals[i][2],proy:vals[i][3],f:vals[i][4]}));}
+const data=[...make('Crédito Santander',sant),...make('Seguros Vehiculares',seg)];
+let charts=[];
+const meses=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const hoy=new Date();
+periodo.textContent='PROYECCIÓN '+meses[hoy.getMonth()]+' '+hoy.getFullYear();
+const valueLabelPlugin={id:'valueLabelPlugin',afterDatasetsDraw(chart,args,opts){const{ctx}=chart;ctx.save();ctx.font='bold 11px Arial';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='top';chart.data.datasets.forEach((dataset,i)=>{const meta=chart.getDatasetMeta(i);meta.data.forEach((bar,index)=>{const val=dataset.data[index];const y=Math.min(bar.y+8,bar.base-16);ctx.fillText(val,bar.x,y);});});ctx.restore();}};
+Chart.register(valueLabelPlugin);
+function n(x){return x.toLocaleString('es-PE')}function pct(a,b){return b?Math.round((a/b)*100):0}function sum(arr,k){return arr.reduce((a,b)=>a+b[k],0)}function avgSafe(a,b){return b?a/b:0}function destroy(){charts.forEach(c=>c.destroy());charts=[]}
+function getFiltered(){let pr=producto.value,z=zona.value,m=marca.value,q=buscar.value.toLowerCase();return data.filter(d=>(d.producto===pr)&&(z==='Todos'||d.z===z)&&(m==='Todos'||d.m===m)&&d.p.toLowerCase().includes(q));}
+function sem(v,t1,t2){return v>=t2?'verde':v>=t1?'amarillo':'rojo'}
+function uniqueStores(d){
+  const map={};
+  d.forEach(x=>{ if(!map[x.p]) map[x.p]=x; });
+  return Object.values(map);
+}
+function render(){
+let d=getFiltered();
+let tiendasUnicas=uniqueStores(d);
+let head=sum(tiendasUnicas,'hc'),venta=sum(tiendasUnicas,'pm');
+let meta=sum(d,'meta'),av=sum(d,'av'),proy=sum(d,'proy'),falt=sum(d,'f');
+kHead.textContent=n(head);kVenta.textContent=n(venta);kMeta.textContent=n(meta);kAvance.textContent=n(av);kProy.textContent=n(proy);kFaltan.textContent=n(falt);kFaltan.className='value '+(falt>=0?'positive':'negative');kCumpl.textContent=pct(av,meta)+'% de cumplimiento actual';kMetaSub.textContent='Objetivo total';
+let efiVeh=avgSafe(venta,head), efiProd=avgSafe(proy,head);let s1=sem(efiVeh,3,5),s2=sem(efiProd,.5,1);
+insights.innerHTML=`<div class="insight"><b>EFI_SALES_VEH</b><div class="metric">${efiVeh.toFixed(2)}</div><div>Vehículos promedio mensual / headcount. No duplica equipos ni volumen cuando se revisan ambos productos.</div><span class="semaforo ${s1}">${s1==='verde'?'Alta eficiencia':s1==='amarillo'?'Eficiencia media':'Baja eficiencia'}</span></div><div class="insight"><b>EFI_SALES_STDR</b><div class="metric">${efiProd.toFixed(2)}</div><div>Total proyectado del producto / headcount comercial único.</div><span class="semaforo ${s2}">${s2==='verde'?'Sobre estándar':s2==='amarillo'?'En desarrollo':'Requiere impulso'}</span></div>`;
+tabla.querySelector('tbody').innerHTML=d.map(x=>`<tr class="${x.f<0?'alert':x.f>0?'good':''}"><td>${x.producto}</td><td>${x.p}</td><td>${x.z}</td><td>${x.m}</td><td>${x.hc}</td><td>${x.v}</td><td>${x.pm}</td><td>${x.meta}</td><td>${x.av}</td><td>${x.xd}</td><td><div>${pct(x.av,x.meta)}%</div><div class="bar"><div style="width:${Math.min(100,pct(x.av,x.meta))}%"></div></div></td><td>${x.proy}</td><td class="${x.f>=0?'positive':'negative'}">${x.f}</td><td>${avgSafe(x.pm,x.hc).toFixed(2)}</td><td>${avgSafe(x.proy,x.hc).toFixed(2)}</td></tr>`).join('');
+destroy();
+let top=[...tiendasUnicas].sort((a,b)=>b.pm-a.pm).slice(0,10);
+charts.push(new Chart(chartVentas,{type:'bar',data:{labels:top.map(x=>x.p),datasets:[{label:'Promedio mensual de vehículos',data:top.map(x=>x.pm)}]},options:{responsive:true,plugins:{legend:{display:false},valueLabelPlugin:{}},scales:{y:{beginAtZero:true},x:{ticks:{autoSkip:false,maxRotation:45,minRotation:30}}}}}));}
+function init(){[...new Set(data.map(d=>d.z))].sort().forEach(x=>zona.innerHTML+=`<option>${x}</option>`);[...new Set(data.map(d=>d.m))].sort().forEach(x=>marca.innerHTML+=`<option>${x}</option>`);[producto,zona,marca,buscar].forEach(el=>el.addEventListener('input',render));render()}init();
+</script>
+</body>
+</html>
