@@ -37,7 +37,7 @@ label{font-size:12px;font-weight:bold;color:#475467;display:block;margin-bottom:
 </section>
 <section class="insights" id="insights"></section>
 <section class="panel"><h2>Top puntos de venta por tamaño de negocio</h2><canvas id="chartVentas"></canvas></section>
-<section class="panel"><h2>Detalle operativo</h2><div class="table-wrap"><table id="tabla"><thead><tr><th>Producto</th><th>Punto de venta</th><th>Zona</th><th>Marca</th><th>HC</th><th>Venta acum.</th><th>Vehículos</th><th>Meta</th><th>Avance</th><th>X vender</th><th>% Cumpl.</th><th>Total proy.</th><th>Faltan</th><th>EFI_VEH</th><th>EFI_PROD</th></tr></thead><tbody></tbody></table></div></section>
+<section class="panel"><h2>Detalle operativo</h2><div class="table-wrap"><table id="tabla"><thead><tr><th>Producto</th><th>Punto de venta</th><th>Zona</th><th>Marca</th><th>HC</th><th>Venta acum.</th><th>Vehículos promedio mes</th><th id="thMeta">Meta Santander</th><th>Avance</th><th>% Avance</th><th>Total proy.</th><th>Faltan</th><th>EFI_VEH</th><th>EFI_PROD</th></tr></thead><tbody></tbody></table></div></section>
 </main>
 <script>
 const base=[
@@ -63,13 +63,14 @@ function uniqueStores(d){
 }
 function render(){
 let d=getFiltered();
+thMeta.textContent = producto.value === 'Crédito Santander' ? 'Meta Santander' : 'Meta Seguros';
 let tiendasUnicas=uniqueStores(d);
 let head=sum(tiendasUnicas,'hc'),venta=sum(tiendasUnicas,'pm');
 let meta=sum(d,'meta'),av=sum(d,'av'),proy=sum(d,'proy'),falt=sum(d,'f');
 kHead.textContent=n(head);kVenta.textContent=n(venta);kMeta.textContent=n(meta);kAvance.textContent=n(av);kProy.textContent=n(proy);kFaltan.textContent=n(falt);kFaltan.className='value '+(falt>=0?'positive':'negative');kCumpl.textContent=pct(av,meta)+'% de cumplimiento actual';kMetaSub.textContent='Objetivo total';
 let efiVeh=avgSafe(venta,head), efiProd=avgSafe(proy,head);let s1=sem(efiVeh,3,5),s2=sem(efiProd,.5,1);
 insights.innerHTML=`<div class="insight"><b>EFI_SALES_VEH</b><div class="metric">${efiVeh.toFixed(2)}</div><div>Vehículos promedio mensual / headcount. No duplica equipos ni volumen cuando se revisan ambos productos.</div><span class="semaforo ${s1}">${s1==='verde'?'Alta eficiencia':s1==='amarillo'?'Eficiencia media':'Baja eficiencia'}</span></div><div class="insight"><b>EFI_SALES_STDR</b><div class="metric">${efiProd.toFixed(2)}</div><div>Total proyectado del producto / headcount comercial único.</div><span class="semaforo ${s2}">${s2==='verde'?'Sobre estándar':s2==='amarillo'?'En desarrollo':'Requiere impulso'}</span></div>`;
-tabla.querySelector('tbody').innerHTML=d.map(x=>`<tr class="${x.f<0?'alert':x.f>0?'good':''}"><td>${x.producto}</td><td>${x.p}</td><td>${x.z}</td><td>${x.m}</td><td>${x.hc}</td><td>${x.v}</td><td>${x.pm}</td><td>${x.meta}</td><td>${x.av}</td><td>${x.xd}</td><td><div>${pct(x.av,x.meta)}%</div><div class="bar"><div style="width:${Math.min(100,pct(x.av,x.meta))}%"></div></div></td><td>${x.proy}</td><td class="${x.f>=0?'positive':'negative'}">${x.f}</td><td>${avgSafe(x.pm,x.hc).toFixed(2)}</td><td>${avgSafe(x.proy,x.hc).toFixed(2)}</td></tr>`).join('');
+tabla.querySelector('tbody').innerHTML=d.map(x=>`<tr class="${x.f<0?'alert':x.f>0?'good':''}"><td>${x.producto}</td><td>${x.p}</td><td>${x.z}</td><td>${x.m}</td><td>${x.hc}</td><td>${x.v}</td><td>${x.pm}</td><td>${x.meta}</td><td>${x.av}</td><td><div>${pct(x.av,x.meta)}%</div><div class="bar"><div style="width:${Math.min(100,pct(x.av,x.meta))}%"></div></div></td><td>${x.proy}</td><td class="${x.f>=0?'positive':'negative'}">${x.f}</td><td>${avgSafe(x.pm,x.hc).toFixed(2)}</td><td>${avgSafe(x.proy,x.hc).toFixed(2)}</td></tr>`).join('');
 destroy();
 let top=[...tiendasUnicas].sort((a,b)=>b.pm-a.pm).slice(0,10);
 charts.push(new Chart(chartVentas,{type:'bar',data:{labels:top.map(x=>x.p),datasets:[{label:'Promedio mensual de vehículos',data:top.map(x=>x.pm)}]},options:{responsive:true,plugins:{legend:{display:false},valueLabelPlugin:{}},scales:{y:{beginAtZero:true},x:{ticks:{autoSkip:false,maxRotation:45,minRotation:30}}}}}));}
